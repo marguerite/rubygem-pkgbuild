@@ -1,0 +1,35 @@
+#!/usr/bin/env ruby
+
+$LOAD_PATH.push(File.expand_path(File.dirname(__FILE__) + '/../lib'))
+
+require 'optparse'
+require 'pkgbuild'
+
+options = {}
+
+OptionParser.new do |opts|
+  opts.banner = 'Parse ArchLinux PKGBUILDs in Ruby'
+  opts.on('-f file', '--file file', 'The PKGBUILD file') do |v|
+    options['file'] = v
+  end
+
+  opts.on('-p', '--path path', 'The path of the attribute to parse. eg: /subpackages[pkg1]/pkgname or /makedepends') do |v|
+    options['path'] = v
+  end
+end.parse!
+
+path = options.fetch('path')
+pkgbuild = PKGBuild::Package.new(options.fetch("file"))
+
+raise 'path must start with /' unless path =~ %r{^/}
+
+obj = pkgbuild
+regex = /^(.*)\[(.*)\]$/
+path.split('/').reject!(&:empty?).each do |cmd|
+  obj = if cmd =~ regex
+          obj.send(Regexp.last_match[1])[Regexp.last_match(2)]
+        else
+          obj.send(cmd.to_sym)
+        end
+end
+p obj
